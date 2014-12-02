@@ -36,12 +36,16 @@ class TestLattice(object):
 
     def test_init(self, lattice_params):
         """Test the constructor"""
-        # TODO: Test in here for neighbour ranks
         lattice = Lattice((8, 4, 4, 4), 1)
         for key, value in lattice_params.items():
             assert getattr(lattice, key) == value
         assert isinstance(lattice.comm, MPI.Cartcomm)
         assert len(lattice.sites) == lattice_params['locvol']
+        my_coord = lattice.comm.Get_coords(lattice.comm.Get_rank())
+        for neighbour in lattice.neighbours:
+            neighbour_coord = lattice.comm.Get_coords(neighbour)
+            assert sum(map(lambda x: abs(x[1] - x[0]),
+                           zip(my_coord, neighbour_coord))) == 1
 
         if lattice_params['nprocs'] > 1:
             with pytest.raises(RuntimeError):
