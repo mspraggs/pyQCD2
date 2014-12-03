@@ -53,5 +53,9 @@ class Lattice(object):
 
     def ishere(self, site):
         """Determine whether the current coordinate is here"""
-        site = tuple(map(lambda x: x[0] % x[1], zip(site, self.latshape)))
         return site in self.local_sites
+    @staticmethod
+    def sanitize(site, shape):
+        """Applies periodic boundary conditions to the given site coordinate
+        using the given the lattice shape"""
+        return tuple(map(lambda x: x[0] % x[1], zip(site, shape)))
