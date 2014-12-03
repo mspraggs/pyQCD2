@@ -35,9 +35,9 @@ class Lattice(object):
         self.mpicoord = tuple(self.comm.Get_coords(self.comm.Get_rank()))
         # Corner of the lattice on this node
         corner = tuple([x * y for x, y in zip(self.mpicoord, self.locshape)])
-        self.sites = (np.array(list(np.ndindex(self.locshape)))
-                      + np.array([corner])).tolist()
-        self.sites = map(lambda site: tuple(site), self.sites)
+        self.local_sites = (np.array(list(np.ndindex(self.locshape)))
+                            + np.array([corner])).tolist()
+        self.local_sites = map(lambda site: tuple(site), self.local_sites)
 
     def ishere(self, site):
         """Determine whether the current coordinate is here"""

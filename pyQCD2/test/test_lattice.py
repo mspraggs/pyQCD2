@@ -40,7 +40,7 @@ class TestLattice(object):
         for key, value in lattice_params.items():
             assert getattr(lattice, key) == value
         assert isinstance(lattice.comm, MPI.Cartcomm)
-        assert len(lattice.sites) == lattice_params['locvol']
+        assert len(lattice.local_sites) == lattice_params['locvol']
         my_coord = lattice.comm.Get_coords(lattice.comm.Get_rank())
         for neighbour in lattice.neighbours:
             neighbour_coord = lattice.comm.Get_coords(neighbour)
