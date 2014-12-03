@@ -6,12 +6,14 @@ from __future__ import absolute_import
 
 
 class Field(object):
+    """Base Field class, from which all other fields are derived"""
 
-    def __init__(self, lattice, local_shape):
-        pass
+    def __init__(self, lattice, field_shape, dtype):
+        """Field constructor"""
+        self.lattice = lattice
+        self.field_shape = field_shape
 
-    def ishere(self, site):
-        pass
+        self.data = np.zeros(lattice.locshape + field_shape, dtype=dtype)
 
     def halo_swap(self):
         pass
