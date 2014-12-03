@@ -38,6 +38,18 @@ class Lattice(object):
         self.local_sites = (np.array(list(np.ndindex(self.locshape)))
                             + np.array([corner])).tolist()
         self.local_sites = map(lambda site: tuple(site), self.local_sites)
+        self.mpi_neighbours = []
+        for dim in range(self.ndims):
+            axis_neighbours = []
+            for offset in [-1, 1]:
+                coord = list(self.mpicoord)
+                coord[dim] = (coord[dim] + offset) % self.mpishape[dim]
+                neighbour_rank = self.comm.Get_cart_rank(coord)
+                if neighbour_rank == self.comm.Get_rank():
+                    axis_neighbours = ()
+                    break
+                axis_neighbours.append(neighbour_rank)
+            self.mpi_neighbours.append(axis_neighbours)
 
     def ishere(self, site):
         """Determine whether the current coordinate is here"""

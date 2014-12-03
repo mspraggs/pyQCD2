@@ -42,11 +42,17 @@ class TestLattice(object):
         assert isinstance(lattice.comm, MPI.Cartcomm)
         assert len(lattice.local_sites) == lattice_params['locvol']
         my_coord = lattice.comm.Get_coords(lattice.comm.Get_rank())
-        for neighbour in lattice.neighbours:
-            neighbour_coord = lattice.comm.Get_coords(neighbour)
-            assert sum(map(lambda x: abs(x[1] - x[0]),
-                           zip(my_coord, neighbour_coord))) == 1
-        assert len(lattice.neighbours) == 8
+        # MPI neighbours shouldn't be more than 1 hop away
+        for axis_neighbours in lattice.mpi_neighbours:
+            for neighbour in axis_neighbours:
+                neighbour_coord = lattice.comm.Get_coords(neighbour)
+                diffs = map(lambda x: abs(x[1] - x[0]), zip(my_coord, neighbour_coord))
+                # Account for periodic boundary conditions
+                for i, diff in enumerate(diffs):
+                    if diff > lattice.mpishape[i] / 2:
+                        diffs[i] = lattice.mpishape[i] - diff
+                assert sum(diffs) == 1
+        assert len(lattice.mpi_neighbours) == 4
 
         if lattice_params['nprocs'] > 1:
             with pytest.raises(RuntimeError):
