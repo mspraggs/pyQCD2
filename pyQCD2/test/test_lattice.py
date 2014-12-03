@@ -22,7 +22,7 @@ def lattice_params():
     params['mpishape'] = tuple(MPI.Compute_dims(nprocs, len(latshape)))
     params['locshape'] = tuple([x // y for x, y in zip(params['latshape'],
                                                        params['mpishape'])])
-    params['datashape'] = tuple([x // y + 2 for x, y in zip(params['latshape'],
+    params['haloshape'] = tuple([x // y + 2 for x, y in zip(params['latshape'],
                                                             params['mpishape'])])
     params['locvol'] = reduce(lambda x, y: x * y,
                               params['locshape'])
@@ -72,8 +72,8 @@ class TestLattice(object):
         """Test Lattice.get_local_index"""
         lattice = Lattice((8, 4, 4, 4), 1)
         first_index = reduce(lambda x, y: x * y[0] + y[1],
-                             zip(lattice.datashape[-1:0:-1],
+                             zip(lattice.haloshape[-1:0:-1],
                                  (1, 1, 1)), 1)
         assert lattice.get_local_index((0, 0, 0, 0)) == first_index
         assert (lattice.get_local_index((7, 3, 3, 3))
-                == np.prod(lattice.data_shape) - first_index - 1)
+                == np.prod(lattice.haloshape) - first_index - 1)

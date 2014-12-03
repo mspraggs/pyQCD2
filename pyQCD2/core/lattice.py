@@ -18,6 +18,7 @@ class Lattice(object):
         nprocs = MPI.COMM_WORLD.Get_size()
         self.mpishape = tuple(MPI.Compute_dims(nprocs, len(shape)))
         self.locshape = tuple([x // y for x, y in zip(shape, self.mpishape)])
+        self.haloshape = tuple(map(lambda x: x + 2 * halo, self.locshape))
         self.latshape = shape
         self.locvol = reduce(lambda x, y: x * y, self.locshape)
         self.latvol = reduce(lambda x, y: x * y, self.latshape)
