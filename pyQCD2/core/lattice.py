@@ -54,6 +54,26 @@ class Lattice(object):
     def ishere(self, site):
         """Determine whether the current coordinate is here"""
         return site in self.local_sites
+
+    def get_local_coords(self, site):
+        """Get the local coordinates of the specified site"""
+        if not self.ishere(site):
+            return None
+        # Account for the halo around the local data
+        corner = self.halo * np.ones(self.ndims, dtype=int)
+        local_coords = np.array(self.sanitize(site, self.locshape))
+        return tuple(local_coords + corner)
+
+    def get_local_index(self, site):
+        """Get the local lexicographic index of the specified site"""
+        local_coords = self.get_local_coords(site)
+        if local_coords:
+            it = zip(self.haloshape[1:], local_coords[1:])
+            return reduce(lambda x, y: x * y[0] + y[1], it,
+                          local_coords[0])
+        else:
+            return
+
     @staticmethod
     def sanitize(site, shape):
         """Applies periodic boundary conditions to the given site coordinate
