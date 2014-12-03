@@ -46,6 +46,7 @@ class TestLattice(object):
             neighbour_coord = lattice.comm.Get_coords(neighbour)
             assert sum(map(lambda x: abs(x[1] - x[0]),
                            zip(my_coord, neighbour_coord))) == 1
+        assert len(lattice.neighbours) == 8
 
         if lattice_params['nprocs'] > 1:
             with pytest.raises(RuntimeError):
