@@ -83,3 +83,7 @@ class TestLattice(object):
         assert lattice.get_local_index((0, 0, 0, 0)) == first_index
         assert (lattice.get_local_index((7, 3, 3, 3))
                 == np.prod(lattice.haloshape) - first_index - 1)
+
+    def test_sanitize(self):
+        """Test Lattice.sanitize"""
+        assert Lattice.sanitize((3, -1, 8, 2), (4, 4, 4, 4)) == (3, 3, 0, 2)
