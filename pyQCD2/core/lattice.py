@@ -32,7 +32,7 @@ class Lattice(object):
             raise RuntimeError("Invalid number of MPI processes")
 
         # Determine the coordinates of the sites on the current node
-        self.mpicoord = self.comm.Get_coords(self.comm.Get_rank())
+        self.mpicoord = tuple(self.comm.Get_coords(self.comm.Get_rank()))
         # Corner of the lattice on this node
         corner = tuple([x * y for x, y in zip(self.mpicoord, self.locshape)])
         self.sites = (np.array(list(np.ndindex(self.locshape)))
