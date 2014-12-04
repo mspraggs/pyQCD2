@@ -27,6 +27,9 @@ class Field(object):
                       + field_shape)
         self.data = np.zeros(data_shape, dtype=dtype)
 
+    def fill(self, value):
+        """Fill all site values with the specified value"""
+
     def halo_swap(self):
         pass
 
