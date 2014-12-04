@@ -28,6 +28,7 @@ def test_field():
                              mpi_dtype=MPI.DOUBLE,
                              lattice=lattice))
 
+
 class TestField(object):
 
     def test_init(self, test_field):
