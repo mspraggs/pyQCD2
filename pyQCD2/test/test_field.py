@@ -5,6 +5,7 @@ from __future__ import absolute_import
 import collections
 
 from mpi4py import MPI
+import numpy as np
 import pytest
 
 from pyQCD2.core.lattice import Lattice
@@ -18,6 +19,9 @@ def test_field():
                                           ["field", "params"])
     lattice = Lattice((8, 4, 4, 4))
     field = Field(lattice, (), float)
+    start = lattice.locvol * lattice.comm.Get_rank()
+    end = lattice.locvol * (lattice.comm.Get_rank() + 1)
+    field.data = np.arange(start, end).reshape(lattice.latshape)
     return FieldFixture(field,
                         dict(field_shape=(), dtype=float,
                              mpi_dtype=MPI.DOUBLE,
