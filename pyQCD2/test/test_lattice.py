@@ -22,12 +22,14 @@ def lattice_params():
     params['mpishape'] = tuple(MPI.Compute_dims(nprocs, len(latshape)))
     params['locshape'] = tuple([x // y for x, y in zip(params['latshape'],
                                                        params['mpishape'])])
-    params['haloshape'] = tuple([x // y + 2 for x, y in zip(params['latshape'],
-                                                            params['mpishape'])])
     params['locvol'] = reduce(lambda x, y: x * y,
                               params['locshape'])
     params['ndims'] = len(latshape)
-    params['halo'] = 1
+    params['halos'] = map(lambda x: int(x > 1), params['mpishape'])
+    params['haloshape'] = tuple([x // y + 2 * z
+                                 for x, y, z in zip(params['latshape'],
+                                                    params['mpishape'],
+                                                    params['halos'])])
 
     return params
 
@@ -46,7 +48,8 @@ class TestLattice(object):
         for axis_neighbours in lattice.mpi_neighbours:
             for neighbour in axis_neighbours:
                 neighbour_coord = lattice.comm.Get_coords(neighbour)
-                diffs = map(lambda x: abs(x[1] - x[0]), zip(my_coord, neighbour_coord))
+                diffs = map(lambda x: abs(x[1] - x[0]),
+                            zip(my_coord, neighbour_coord))
                 # Account for periodic boundary conditions
                 for i, diff in enumerate(diffs):
                     if diff > lattice.mpishape[i] / 2:

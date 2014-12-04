@@ -19,10 +19,8 @@ def test_field():
                                           ["field", "params"])
     lattice = Lattice((8, 4, 4, 4))
     field = Field(lattice, (), float)
-    start = lattice.locvol * lattice.comm.Get_rank()
-    end = lattice.locvol * (lattice.comm.Get_rank() + 1)
-    s = slice(lattice.halo, -lattice.halo)
-    field.data[s, s, s, s] = 1.0
+    s = tuple([slice(h, -h) for h in lattice.halos])
+    field.data[s] = 1.0
     return FieldFixture(field,
                         dict(field_shape=(), dtype=float,
                              mpi_dtype=MPI.DOUBLE,
@@ -37,9 +35,10 @@ class TestField(object):
         for key, value in test_field.params.items():
             assert getattr(field, key) == value
         lattice = test_field.params['lattice']
-        expected_shape = (tuple([N + 2 * lattice.halo
-                                 for N in lattice.locshape])
-                          + test_field.params['field_shape'])
+        haloshape = tuple([x + 2 * y
+                           for x, y in zip(lattice.locshape,
+                                           lattice.halos)])
+        expected_shape = (haloshape + test_field.params['field_shape'])
         assert field.data.shape == expected_shape
 
     def test_halo_swap(self, test_field):

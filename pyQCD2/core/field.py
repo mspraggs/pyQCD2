@@ -22,10 +22,7 @@ class Field(object):
         self.field_shape = field_shape
         self.dtype = np.dtype(dtype)
         self.mpi_dtype = type_lookup[self.dtype]
-        data_shape = (tuple(map(lambda x: x + 2 * lattice.halo,
-                                lattice.locshape))
-                      + field_shape)
-        self.data = np.zeros(data_shape, dtype=dtype)
+        self.data = np.zeros(lattice.haloshape, dtype=dtype)
 
     def fill(self, value):
         """Fill all site values with the specified value"""

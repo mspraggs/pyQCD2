@@ -18,13 +18,14 @@ class Lattice(object):
         nprocs = MPI.COMM_WORLD.Get_size()
         self.mpishape = tuple(MPI.Compute_dims(nprocs, len(shape)))
         self.locshape = tuple([x // y for x, y in zip(shape, self.mpishape)])
-        self.haloshape = tuple(map(lambda x: x + 2 * halo, self.locshape))
+        self.halos = map(lambda x: (x > 1) * halo, self.mpishape)
+        self.haloshape = tuple(map(lambda x: x[0] + 2 * x[1],
+                                   zip(self.locshape, self.halos)))
         self.latshape = shape
         self.locvol = reduce(lambda x, y: x * y, self.locshape)
         self.latvol = reduce(lambda x, y: x * y, self.latshape)
         self.ndims = len(shape)
         self.nprocs = nprocs
-        self.halo = halo
 
         self.comm = MPI.COMM_WORLD.Create_cart(self.mpishape)
         remainders = [x % y for x, y in zip(shape, self.mpishape)]
@@ -60,7 +61,7 @@ class Lattice(object):
         if not self.ishere(site):
             return None
         # Account for the halo around the local data
-        corner = self.halo * np.ones(self.ndims, dtype=int)
+        corner = np.ndarray(self.halos)
         local_coords = np.array(self.sanitize(site, self.locshape))
         return tuple(local_coords + corner)
 
