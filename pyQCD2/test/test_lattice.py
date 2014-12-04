@@ -71,8 +71,16 @@ class TestLattice(object):
     def test_get_local_coords(self):
         """Test Lattice.get_local_coords"""
         lattice = Lattice((8, 4, 4, 4), 1)
-        assert lattice.get_local_coords((0, 0, 0, 0)) == (1, 1, 1, 1)
-        assert lattice.get_local_coords((7, 3, 3, 3)) == lattice.locshape
+        local_coords = lattice.get_local_coords((0, 0, 0, 0))
+        if lattice.comm.Get_rank() == 0:
+            assert local_coords == (1, 1, 1, 1)
+        else:
+            assert local_coords is None
+        local_coords = lattice.get_local_coords((7, 3, 3, 3))
+        if lattice.comm.Get_rank() == lattice.comm.Get_size() - 1:
+            assert local_coords == lattice.locshape
+        else:
+            assert local_coords is None
 
     def test_get_local_index(self):
         """Test Lattice.get_local_index"""
@@ -80,9 +88,16 @@ class TestLattice(object):
         first_index = reduce(lambda x, y: x * y[0] + y[1],
                              zip(lattice.haloshape[-1:0:-1],
                                  (1, 1, 1)), 1)
-        assert lattice.get_local_index((0, 0, 0, 0)) == first_index
-        assert (lattice.get_local_index((7, 3, 3, 3))
-                == np.prod(lattice.haloshape) - first_index - 1)
+        local_index = lattice.get_local_index((0, 0, 0, 0))
+        if lattice.comm.Get_rank() == 0:
+            assert local_index == first_index
+        else:
+            assert local_index is None
+        local_index = lattice.get_local_index((7, 3, 3, 3))
+        if lattice.comm.Get_rank() == lattice.comm.Get_size() - 1:
+            assert local_index == np.prod(lattice.haloshape) - first_index - 1
+        else:
+            assert local_index is None
 
     def test_sanitize(self):
         """Test Lattice.sanitize"""
