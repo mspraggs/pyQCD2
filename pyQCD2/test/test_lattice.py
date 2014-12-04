@@ -76,12 +76,15 @@ class TestLattice(object):
         lattice = Lattice((8, 4, 4, 4), 1)
         local_coords = lattice.get_local_coords((0, 0, 0, 0))
         if lattice.comm.Get_rank() == 0:
-            assert local_coords == (1, 1, 1, 1)
+            assert local_coords == tuple(map(lambda x: int(x > 1),
+                                             lattice.mpishape))
         else:
             assert local_coords is None
         local_coords = lattice.get_local_coords((7, 3, 3, 3))
         if lattice.comm.Get_rank() == lattice.comm.Get_size() - 1:
-            assert local_coords == lattice.locshape
+            assert local_coords == tuple(map(lambda x: x[0] + x[1] - 1,
+                                             zip(lattice.locshape,
+                                                 lattice.halos)))
         else:
             assert local_coords is None
 
@@ -90,7 +93,7 @@ class TestLattice(object):
         lattice = Lattice((8, 4, 4, 4), 1)
         first_index = reduce(lambda x, y: x * y[0] + y[1],
                              zip(lattice.haloshape[-1:0:-1],
-                                 (1, 1, 1)), 1)
+                                 lattice.halos[-1:0:-1]), 1)
         local_index = lattice.get_local_index((0, 0, 0, 0))
         if lattice.comm.Get_rank() == 0:
             assert local_index == first_index

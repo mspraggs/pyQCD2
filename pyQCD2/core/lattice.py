@@ -61,7 +61,7 @@ class Lattice(object):
         if not self.ishere(site):
             return None
         # Account for the halo around the local data
-        corner = np.ndarray(self.halos)
+        corner = np.array(self.halos)
         local_coords = np.array(self.sanitize(site, self.locshape))
         return tuple(local_coords + corner)
 
