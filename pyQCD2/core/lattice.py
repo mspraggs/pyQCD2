@@ -65,11 +65,10 @@ class Lattice(object):
 
         # Determine the coordinates of the sites on the current node
         self.mpicoord = tuple(self.comm.Get_coords(self.comm.Get_rank()))
-        # Corner of the lattice on this node
-        corner = tuple([x * y for x, y in zip(self.mpicoord, self.locshape)])
-        self.local_sites = (np.array(list(np.ndindex(self.locshape)))
-                            + np.array([corner])).tolist()
-        self.local_sites = map(lambda site: tuple(site), self.local_sites)
+        self.local_sites = generate_local_sites(self.mpicoord, self.locshape)
+        self.halo_sites = generate_halo_sites(self.mpishape, self.locshape,
+                                              self.latshape, self.halos)
+
         self.mpi_neighbours = []
         for dim in range(self.ndims):
             axis_neighbours = []
