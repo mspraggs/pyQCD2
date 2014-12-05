@@ -49,11 +49,9 @@ class Field(object):
             send_slice[i] = slice(-2 * halos[i], -halos[i])
             recv_slice[i] = slice(None, halos[i])
             buffer = self.data[tuple(send_slice)].copy()
-            print(self.data)
             comm.Send([buffer, self.mpi_dtype], dest=front)
             comm.Recv([buffer, self.mpi_dtype], source=back)
             self.data[tuple(recv_slice)] = buffer
-            print(self.data)
             # Now pass data backwards
             send_slice[i] = slice(halos[i], 2 * halos[i])
             recv_slice[i] = slice(-halos[i], None)
