@@ -48,6 +48,22 @@ def test_generate_local_sites():
     assert set(local_sites).difference(expected_sites) == set([])
 
 
+def test_generate_halo_sites():
+    """Test generate_halo_sites in lattice.py"""
+    mpi_coord = (1, 0, 0)
+    local_shape = (8, 4, 4)
+    lattice_shape = (16, 8, 4)
+    halos = (1, 1, 0)
+    expected_sites = [(x + 8, 4, y) for x in range(8) for y in range(4)]
+    expected_sites += [(x + 8, 7, y) for x in range(8) for y in range(4)]
+    expected_sites += [(7, x, y) for x in range(4) for y in range(4)]
+    expected_sites += [(0, x, y) for x in range(4) for y in range(4)]
+    halo_sites = generate_halo_sites(mpi_coord, local_shape, lattice_shape,
+                                     halos)
+    assert len(halo_sites) == 96
+    assert set(halo_sites) == set(expected_sites)
+
+
 class TestLattice(object):
 
     def test_init(self, lattice_params):

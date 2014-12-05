@@ -17,6 +17,30 @@ def generate_local_sites(mpi_coord, local_shape):
     return [tuple(site) for site in (local_sites + corner[None, :])]
 
 
+def generate_halo_sites(mpi_coord, local_shape, lattice_shape, halos):
+    """Generate a list of sites in the halo of the specified MPI node"""
+    lattice_shape = np.array(lattice_shape)
+    corner = (np.array(mpi_coord) * np.array(local_shape) - np.array(halos))
+    halo_shape = np.array(local_shape) + 2 * np.array(halos)
+    loc_and_halo_sites = np.array(list(np.ndindex(tuple(halo_shape))))
+    # First discard any axes that don't have halos
+    halos = np.array(halos)
+    relevant_coords = loc_and_halo_sites[:, halos > 0]
+    # Now we want to filter out all sites where there isn't one and only
+    # one axis coordinate in the halo.
+    nonzero_halos = halos[halos > 0]
+    nonzero_shape = halo_shape[halos > 0]
+    # This will filter when one of the coordinates is in the lower halo
+    cut_behind = nonzero_halos[None, :]
+    num_in_behind = (relevant_coords < cut_behind).astype(int).sum(axis=1)
+    # This will filter when one of the coordinates is in the upper halo
+    cut_ahead = nonzero_shape[None, :] - cut_behind - 1
+    num_in_ahead = (relevant_coords > cut_ahead).astype(int).sum(axis=1)
+    combined_filt = (num_in_ahead + num_in_behind) == 1
+    return [tuple((site + corner) % lattice_shape)
+            for site in loc_and_halo_sites[combined_filt]]
+
+
 class Lattice(object):
     """Handles MPI allocation of lattice sites"""
 
