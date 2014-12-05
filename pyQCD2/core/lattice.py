@@ -10,6 +10,13 @@ from mpi4py import MPI
 import numpy as np
 
 
+def generate_local_sites(mpi_coord, local_shape):
+    """Generate list of sites local to the specified MPI node"""
+    corner = np.array(mpi_coord) * np.array(local_shape)
+    local_sites = np.array(list(np.ndindex(local_shape)))
+    return [tuple(site) for site in (local_sites + corner[None, :])]
+
+
 class Lattice(object):
     """Handles MPI allocation of lattice sites"""
 

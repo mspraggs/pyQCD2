@@ -6,7 +6,8 @@ from mpi4py import MPI
 import numpy as np
 import pytest
 
-from pyQCD2.core.lattice import Lattice
+from pyQCD2.core.lattice import (generate_local_sites, generate_halo_sites,
+                                 Lattice)
 
 
 @pytest.fixture
@@ -32,6 +33,19 @@ def lattice_params():
                                                     params['halos'])])
 
     return params
+
+
+def test_generate_local_sites():
+    """Test generate_local_sites in lattice.py"""
+
+    mpi_coord = (1, 0, 1, 1)
+    local_shape = (8, 4, 4, 4)
+    local_sites = generate_local_sites(mpi_coord, local_shape)
+    assert len(local_sites) == 2 * 4**4
+    expected_sites = set([(t + 8, x, y + 4, z + 4)
+                          for t in range(8) for x in range(4)
+                          for y in range(4) for z in range(4)])
+    assert set(local_sites).difference(expected_sites) == set([])
 
 
 class TestLattice(object):
