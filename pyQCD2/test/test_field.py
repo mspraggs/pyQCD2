@@ -70,3 +70,12 @@ class TestField(object):
             assert np.allclose(test_field.field.data[tuple(selector)], 1)
             selector[dim] = slice(-halos[dim], None)
             assert np.allclose(test_field.field.data[tuple(selector)], 1)
+
+    def test_fill(self, test_field):
+        """Test Field.fill"""
+
+        test_field.field.fill(2.0)
+        assert np.allclose(test_field.field.data, 2.0)
+
+        with pytest.raises(ValueError):
+            test_field.field.fill(np.arange(5))

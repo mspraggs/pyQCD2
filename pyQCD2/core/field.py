@@ -60,6 +60,15 @@ class Field(object):
             comm.Recv([buffer, self.mpi_dtype], source=front)
             self.data[tuple(recv_slice)] = buffer
 
+    def fill(self, value):
+        """Fill the field with the specified value"""
+
+        if np.shape(value) != self.field_shape:
+            raise ValueError("Supplied value does not have shape {}"
+                             .format(self.field_shape))
+        data_slice = [slice(None)] * self.lattice.ndims
+        self.data[data_slice] = value
+
     def roll(self, axis, nsites):
         pass
 
