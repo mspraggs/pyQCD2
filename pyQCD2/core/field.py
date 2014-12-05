@@ -27,8 +27,40 @@ class Field(object):
     def fill(self, value):
         """Fill all site values with the specified value"""
 
-    def halo_swap(self):
-        pass
+    def halo_swap(self, axis=None):
+        """Swap the values in the field values in the halos between adjacent
+        nodes using MPI"""
+
+        comm = self.lattice.comm
+        halos = self.lattice.halos
+
+        # If there's only one node, don't bother swapping
+        if comm.Get_size() == 1:
+            return
+        for i, neighbours in enumerate(self.lattice.mpi_neighbours):
+            if not neighbours:
+                continue
+            back, front = neighbours
+            send_slice = [slice(halo, -halo) if halo > 1 else slice(None)
+                          for halo in halos]
+            recv_slice = [slice(halo, -halo) if halo > 1 else slice(None)
+                          for halo in halos]
+            # First pass data forwards
+            send_slice[i] = slice(-2 * halos[i], -halos[i])
+            recv_slice[i] = slice(None, halos[i])
+            buffer = self.data[tuple(send_slice)].copy()
+            print(self.data)
+            comm.Send([buffer, self.mpi_dtype], dest=front)
+            comm.Recv([buffer, self.mpi_dtype], source=back)
+            self.data[tuple(recv_slice)] = buffer
+            print(self.data)
+            # Now pass data backwards
+            send_slice[i] = slice(halos[i], 2 * halos[i])
+            recv_slice[i] = slice(-halos[i], None)
+            buffer = self.data[tuple(send_slice)].copy()
+            comm.Send([buffer, self.mpi_dtype], dest=back)
+            comm.Recv([buffer, self.mpi_dtype], source=front)
+            self.data[tuple(recv_slice)] = buffer
 
     def roll(self, axis, nsites):
         pass

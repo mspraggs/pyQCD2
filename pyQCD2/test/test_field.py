@@ -19,7 +19,7 @@ def test_field():
                                           ["field", "params"])
     lattice = Lattice((8, 4, 4, 4))
     field = Field(lattice, (), float)
-    s = tuple([slice(h, -h) for h in lattice.halos])
+    s = tuple([slice(h, -h) if h > 0 else slice(None) for h in lattice.halos])
     field.data[s] = 1.0
     return FieldFixture(field,
                         dict(field_shape=(), dtype=float,
@@ -50,16 +50,23 @@ class TestField(object):
 
         # First check that all data is zero
         ndims = test_field.params['lattice'].ndims
+        halos = test_field.params['lattice'].halos
         for dim in range(ndims):
-            for i in [0, -1]:
-                selector = [slice(None)] * ndims
-                selector[dim] = i
-                selector = tuple(selector)
-                assert np.allclose(test_field.field.data[selector], 0)
+            if halos[dim] == 0:
+                continue
+            selector = [slice(halo, -halo) if halo > 0 else slice(None)
+                        for halo in halos]
+            selector[dim] = slice(None, halos[dim])
+            assert np.allclose(test_field.field.data[tuple(selector)], 0)
+            selector[dim] = slice(-halos[dim], None)
+            assert np.allclose(test_field.field.data[tuple(selector)], 0)
         test_field.field.halo_swap()
         for dim in range(ndims):
-            for i in [0, -1]:
-                selector = [slice(None)] * ndims
-                selector[dim] = i
-                selector = tuple(selector)
-                assert np.allclose(test_field.field.data[selector], 1)
+            if halos[dim] == 0:
+                continue
+            selector = [slice(halo, -halo) if halo > 0 else slice(None)
+                        for halo in halos]
+            selector[dim] = slice(None, halos[dim])
+            assert np.allclose(test_field.field.data[tuple(selector)], 1)
+            selector[dim] = slice(-halos[dim], None)
+            assert np.allclose(test_field.field.data[tuple(selector)], 1)
