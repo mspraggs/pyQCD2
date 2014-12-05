@@ -92,8 +92,8 @@ class TestLattice(object):
         """Test Lattice.get_local_index"""
         lattice = Lattice((8, 4, 4, 4), 1)
         first_index = reduce(lambda x, y: x * y[0] + y[1],
-                             zip(lattice.haloshape[-1:0:-1],
-                                 lattice.halos[-1:0:-1]), 1)
+                             zip(lattice.haloshape[1:],
+                                 lattice.halos[1:]), lattice.halos[0])
         local_index = lattice.get_local_index((0, 0, 0, 0))
         if lattice.comm.Get_rank() == 0:
             assert local_index == first_index
