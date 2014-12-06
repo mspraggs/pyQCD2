@@ -32,8 +32,6 @@ class Field(object):
         nodes using MPI"""
 
         comm = self.lattice.comm
-        halos = self.lattice.halos
-
         # If there's only one node, don't bother swapping
         if comm.Get_size() == 1:
             return
