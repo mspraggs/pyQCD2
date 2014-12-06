@@ -66,7 +66,7 @@ class Lattice(object):
         # Determine the coordinates of the sites on the current node
         self.mpicoord = tuple(self.comm.Get_coords(self.comm.Get_rank()))
         self.local_sites = generate_local_sites(self.mpicoord, self.locshape)
-        self.halo_sites = generate_halo_sites(self.mpishape, self.locshape,
+        self.halo_sites = generate_halo_sites(self.mpicoord, self.locshape,
                                               self.latshape, self.halos)
 
         self.mpi_neighbours = []
@@ -77,23 +77,37 @@ class Lattice(object):
                 coord[dim] = (coord[dim] + offset) % self.mpishape[dim]
                 neighbour_rank = self.comm.Get_cart_rank(coord)
                 if neighbour_rank == self.comm.Get_rank():
-                    axis_neighbours = ()
+                    axis_neighbours = []
                     break
                 axis_neighbours.append(neighbour_rank)
             self.mpi_neighbours.append(axis_neighbours)
 
     def ishere(self, site):
         """Determine whether the current coordinate is here"""
-        return site in self.local_sites
+        return site in self.local_sites + self.halo_sites
 
     def get_local_coords(self, site):
         """Get the local coordinates of the specified site"""
-        if not self.ishere(site):
+        if site in self.local_sites:
+            # Account for the halo around the local data
+            corner = np.array(self.halos)
+            local_coords = np.array(self.sanitize(site, self.locshape))
+            return tuple(local_coords + corner)
+        elif site in self.halo_sites:
+            site = np.array(site)
+            mpishape = np.array(self.mpishape)
+            mpicoord = site // np.array(self.locshape)
+            axis = mpicoord - np.array(self.mpicoord)
+            filt = axis != 0
+            axisf = axis[filt]
+            axisf = (axisf if (np.abs(axisf) < mpishape[filt] / 2)
+                     else axisf % (np.sign(axisf) * mpishape[filt]))
+            local_coords = np.array(self.sanitize(site, self.locshape))
+            local_coords += ((3 if (axis > 0).any() else 1)
+                             * axis * np.array(self.halos))
+            return self.sanitize(tuple(local_coords), self.haloshape)
+        else:
             return None
-        # Account for the halo around the local data
-        corner = np.array(self.halos)
-        local_coords = np.array(self.sanitize(site, self.locshape))
-        return tuple(local_coords + corner)
 
     def get_local_index(self, site):
         """Get the local lexicographic index of the specified site"""
@@ -103,7 +117,7 @@ class Lattice(object):
             return reduce(lambda x, y: x * y[0] + y[1], it,
                           local_coords[0])
         else:
-            return
+            return None
 
     @staticmethod
     def sanitize(site, shape):
