@@ -12,19 +12,18 @@ import numpy as np
 
 def generate_local_sites(mpi_coord, local_shape):
     """Generate list of sites local to the specified MPI node"""
-    corner = np.array(mpi_coord) * np.array(local_shape)
-    local_sites = np.array(list(np.ndindex(local_shape)))
+    corner = mpi_coord * local_shape
+    local_sites = np.array(list(np.ndindex(tuple(local_shape))))
+    return local_sites + corner[None, :]
     return [tuple(site) for site in (local_sites + corner[None, :])]
 
 
 def generate_halo_sites(mpi_coord, local_shape, lattice_shape, halos):
     """Generate a list of sites in the halo of the specified MPI node"""
-    lattice_shape = np.array(lattice_shape)
-    corner = (np.array(mpi_coord) * np.array(local_shape) - np.array(halos))
-    halo_shape = np.array(local_shape) + 2 * np.array(halos)
+    corner = (mpi_coord * local_shape - halos)
+    halo_shape = local_shape + 2 * halos
     loc_and_halo_sites = np.array(list(np.ndindex(tuple(halo_shape))))
     # First discard any axes that don't have halos
-    halos = np.array(halos)
     relevant_coords = loc_and_halo_sites[:, halos > 0]
     # Now we want to filter out all sites where there isn't one and only
     # one axis coordinate in the halo.
@@ -37,17 +36,12 @@ def generate_halo_sites(mpi_coord, local_shape, lattice_shape, halos):
     cut_ahead = nonzero_shape[None, :] - cut_behind - 1
     num_in_ahead = (relevant_coords > cut_ahead).astype(int).sum(axis=1)
     combined_filt = (num_in_ahead + num_in_behind) == 1
-    return [tuple((site + corner) % lattice_shape)
-            for site in loc_and_halo_sites[combined_filt]]
+    return ((loc_and_halo_sites[combined_filt] + corner[None, :])
+            % lattice_shape[None, :])
 
 
 def compute_halo_coords(site, mpicoord, mpishape, locshape, haloshape, halos):
     """Calculates the coordinates of the given halo site in the local data"""
-    site = np.array(site)
-    mpishape = np.array(mpishape)
-    locshape = np.array(locshape)
-    halos = np.array(halos)
-    haloshape = np.array(haloshape)
     mpicoord_neighb = site // locshape
     axis = mpicoord_neighb - mpicoord
     filt = axis != 0
@@ -61,7 +55,7 @@ def compute_halo_coords(site, mpicoord, mpishape, locshape, haloshape, halos):
     # Shift the coordinate to account for the fact it's in a halo
     halo_shift = (-2 * halos) if (axis > 0).any() else halos
     local_coords += halo_shift * filt
-    return tuple(local_coords % haloshape)
+    return local_coords % haloshape
 
 
 class Lattice(object):
@@ -70,24 +64,22 @@ class Lattice(object):
     def __init__(self, shape, halo=1):
         """Construct Lattice object for lattice with supplied shape"""
         nprocs = MPI.COMM_WORLD.Get_size()
-        self.mpishape = tuple(MPI.Compute_dims(nprocs, len(shape)))
-        self.locshape = tuple([x // y for x, y in zip(shape, self.mpishape)])
-        self.halos = map(lambda x: (x > 1) * halo, self.mpishape)
-        self.haloshape = tuple(map(lambda x: x[0] + 2 * x[1],
-                                   zip(self.locshape, self.halos)))
-        self.latshape = shape
-        self.locvol = reduce(lambda x, y: x * y, self.locshape)
-        self.latvol = reduce(lambda x, y: x * y, self.latshape)
-        self.ndims = len(shape)
+        self.latshape = np.array(shape)
+        self.mpishape = np.array(MPI.Compute_dims(nprocs, len(shape)))
+        self.locshape = self.latshape // self.mpishape
+        self.halos = halo * (self.mpishape > 1).astype(int)
+        self.haloshape = self.locshape + 2 * self.halos
+        self.locvol = self.locshape.prod(0)
+        self.latvol = self.latshape.prod(0)
+        self.ndims = self.latshape.size
         self.nprocs = nprocs
 
         self.comm = MPI.COMM_WORLD.Create_cart(self.mpishape)
-        remainders = [x % y for x, y in zip(shape, self.mpishape)]
-        if sum(remainders) > 0:
+        if (self.latshape % self.mpishape).sum() > 0:
             raise RuntimeError("Invalid number of MPI processes")
 
         # Determine the coordinates of the sites on the current node
-        self.mpicoord = tuple(self.comm.Get_coords(self.comm.Get_rank()))
+        self.mpicoord = np.array(self.comm.Get_coords(self.comm.Get_rank()))
         self.local_sites = generate_local_sites(self.mpicoord, self.locshape)
         self.halo_sites = generate_halo_sites(self.mpicoord, self.locshape,
                                               self.latshape, self.halos)
@@ -107,16 +99,17 @@ class Lattice(object):
 
     def ishere(self, site):
         """Determine whether the current coordinate is here"""
-        return site in self.local_sites + self.halo_sites
+        site = np.array(site)[None, :]
+        return ((self.local_sites == site).all(axis=1).any()
+                or (self.halo_sites == site).all(axis=1).any())
 
     def get_local_coords(self, site):
         """Get the local coordinates of the specified site"""
-        if site in self.local_sites:
+        if (self.local_sites == site[None, :]).all(axis=1).any():
             # Account for the halo around the local data
-            corner = np.array(self.halos)
-            local_coords = np.array(self.sanitize(site, self.locshape))
-            return tuple(local_coords + corner)
-        elif site in self.halo_sites:
+            local_coords = site % self.locshape
+            return tuple(local_coords + self.halos)
+        elif (self.halo_sites == site[None, :]).all(axis=1).any():
             return compute_halo_coords(site, self.mpicoord, self.mpishape,
                                        self.locshape, self.haloshape,
                                        self.halos)
@@ -126,7 +119,7 @@ class Lattice(object):
     def get_local_index(self, site):
         """Get the local lexicographic index of the specified site"""
         local_coords = self.get_local_coords(site)
-        if local_coords:
+        if local_coords is not None:
             it = zip(self.haloshape[1:], local_coords[1:])
             return reduce(lambda x, y: x * y[0] + y[1], it,
                           local_coords[0])
