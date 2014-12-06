@@ -40,25 +40,16 @@ class Field(object):
         for i, neighbours in enumerate(self.lattice.mpi_neighbours):
             if not neighbours:
                 continue
-            back, front = neighbours
-            send_slice = [slice(halo, -halo) if halo > 1 else slice(None)
-                          for halo in halos]
-            recv_slice = [slice(halo, -halo) if halo > 1 else slice(None)
-                          for halo in halos]
-            # First pass data forwards
-            send_slice[i] = slice(-2 * halos[i], -halos[i])
-            recv_slice[i] = slice(None, halos[i])
-            buffer = self.data[tuple(send_slice)].copy()
-            comm.Send([buffer, self.mpi_dtype], dest=front)
-            comm.Recv([buffer, self.mpi_dtype], source=back)
-            self.data[tuple(recv_slice)] = buffer
-            # Now pass data backwards
-            send_slice[i] = slice(halos[i], 2 * halos[i])
-            recv_slice[i] = slice(-halos[i], None)
-            buffer = self.data[tuple(send_slice)].copy()
-            comm.Send([buffer, self.mpi_dtype], dest=back)
-            comm.Recv([buffer, self.mpi_dtype], source=front)
-            self.data[tuple(recv_slice)] = buffer
+            for direc in [1, -1]:
+                # direc = 1 -> pass forward; direc = -1 -> pass backward
+                # neighbours = [node_behind, node_ahead]
+                node_from, node_to = neighbours[::direc]
+                send_slicer = self.lattice.halo_slice(i, direc, 'send')
+                recv_slicer = self.lattice.halo_slice(i, -direc, 'recv')
+                buffer = self.data[send_slicer].copy()
+                comm.Send([buffer, self.mpi_dtype], dest=node_to)
+                comm.Recv([buffer, self.mpi_dtype], source=node_from)
+                self.data[recv_slicer] = buffer
 
     def fill(self, value):
         """Fill the field with the specified value"""
