@@ -41,6 +41,29 @@ def generate_halo_sites(mpi_coord, local_shape, lattice_shape, halos):
             for site in loc_and_halo_sites[combined_filt]]
 
 
+def compute_halo_coords(site, mpicoord, mpishape, locshape, haloshape, halos):
+    """Calculates the coordinates of the given halo site in the local data"""
+    site = np.array(site)
+    mpishape = np.array(mpishape)
+    locshape = np.array(locshape)
+    halos = np.array(halos)
+    haloshape = np.array(haloshape)
+    mpicoord_neighb = site // locshape
+    axis = mpicoord_neighb - mpicoord
+    filt = axis != 0
+    axisf = axis[filt]
+    # Account for period BCs in the MPI grid
+    axis[filt] = (axisf if (np.abs(axisf) < mpishape[filt] / 2)
+                  else axisf % (-np.sign(axisf) * mpishape[filt] / 2))
+    # Compute the data coordinates for the site in the node where it's not
+    # a halo site
+    local_coords = site % locshape + halos
+    # Shift the coordinate to account for the fact it's in a halo
+    halo_shift = (-2 * halos) if (axis > 0).any() else halos
+    local_coords += halo_shift * filt
+    return tuple(local_coords % haloshape)
+
+
 class Lattice(object):
     """Handles MPI allocation of lattice sites"""
 

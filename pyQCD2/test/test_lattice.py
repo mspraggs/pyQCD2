@@ -6,8 +6,8 @@ from mpi4py import MPI
 import numpy as np
 import pytest
 
-from pyQCD2.core.lattice import (generate_local_sites, generate_halo_sites,
-                                 Lattice)
+from pyQCD2.core.lattice import (compute_halo_coords, generate_halo_sites,
+                                 generate_local_sites, Lattice)
 
 
 @pytest.fixture
@@ -62,6 +62,24 @@ def test_generate_halo_sites():
                                      halos)
     assert len(halo_sites) == 96
     assert set(halo_sites) == set(expected_sites)
+
+
+def test_compute_halo_coords():
+    """Test the compute_halo_coords function in lattice.py"""
+    locshape = (8, 4, 4, 4)
+    halos = (2, 2, 2, 2)
+    haloshape = (10, 6, 6, 6)
+    mpishape = (4, 4, 4, 4)
+
+    halo_coords = compute_halo_coords((0, 0, 0, 0), (3, 0, 0, 0),
+                                      mpishape, locshape, haloshape, halos)
+    assert halo_coords == (8, 2, 2, 2)
+    halo_coords = compute_halo_coords((0, 0, 0, 0), (0, 0, 0, 3),
+                                      mpishape, locshape, haloshape, halos)
+    assert halo_coords == (2, 2, 2, 4)
+    halo_coords = compute_halo_coords((4, 2, 0, 0), (0, 1, 0, 0),
+                                      mpishape, locshape, haloshape, halos)
+    assert halo_coords == (6, 0, 2, 2)
 
 
 class TestLattice(object):
