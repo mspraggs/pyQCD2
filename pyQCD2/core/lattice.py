@@ -117,18 +117,9 @@ class Lattice(object):
             local_coords = np.array(self.sanitize(site, self.locshape))
             return tuple(local_coords + corner)
         elif site in self.halo_sites:
-            site = np.array(site)
-            mpishape = np.array(self.mpishape)
-            mpicoord = site // np.array(self.locshape)
-            axis = mpicoord - np.array(self.mpicoord)
-            filt = axis != 0
-            axisf = axis[filt]
-            axisf = (axisf if (np.abs(axisf) < mpishape[filt] / 2)
-                     else axisf % (np.sign(axisf) * mpishape[filt]))
-            local_coords = np.array(self.sanitize(site, self.locshape))
-            local_coords += ((3 if (axis > 0).any() else 1)
-                             * axis * np.array(self.halos))
-            return self.sanitize(tuple(local_coords), self.haloshape)
+            return compute_halo_coords(site, self.mpicoord, self.mpishape,
+                                       self.locshape, self.haloshape,
+                                       self.halos)
         else:
             return None
 
