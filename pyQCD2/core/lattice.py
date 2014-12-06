@@ -103,6 +103,28 @@ class Lattice(object):
         return ((self.local_sites == site).all(axis=1).any()
                 or (self.halo_sites == site).all(axis=1).any())
 
+    def halo_slice(self, dim, position, send_recv):
+        """Generate the slice specifiying the halo region of Field.data"""
+        # dim - dimension/axis of the slice
+        # location - whether front (+ve direction, +1) or rear (-ve direction,
+        # -1) halo is being used.
+        # send_recv - whether the slice is the halo itself ('recv') or the
+        # selection of local sites corresponding to a halo on another node
+        # ('send')
+        slices = [slice(h, -h) if h > 0 else slice(None)
+                  for h in self.halos]
+        if position < 0 and send_recv == 'send':
+            slices[dim] = slice(self.halos[dim], 2 * self.halos[dim])
+        elif position < 0 and send_recv == 'recv':
+            slices[dim] = slice(None, self.halos[dim])
+        elif position > 0 and send_recv == 'send':
+            slices[dim] = slice(-2 * self.halos[dim], -self.halos[dim])
+        elif position > 0 and send_recv == 'recv':
+            slices[dim] = slice(-self.halos[dim], None)
+        else:
+            pass
+        return tuple(slices)
+
     def get_local_coords(self, site):
         """Get the local coordinates of the specified site"""
         if (self.local_sites == site[None, :]).all(axis=1).any():
