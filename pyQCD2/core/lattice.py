@@ -20,6 +20,7 @@ def generate_local_sites(mpi_coord, local_shape):
 
 def generate_halo_sites(mpi_coord, local_shape, lattice_shape, halos):
     """Generate a list of sites in the halo of the specified MPI node"""
+    ndims = len(lattice_shape)
     corner = (mpi_coord * local_shape - halos)
     halo_shape = local_shape + 2 * halos
     loc_and_halo_sites = np.array(list(np.ndindex(tuple(halo_shape))))
@@ -35,7 +36,8 @@ def generate_halo_sites(mpi_coord, local_shape, lattice_shape, halos):
     # This will filter when one of the coordinates is in the upper halo
     cut_ahead = nonzero_shape[None, :] - cut_behind - 1
     num_in_ahead = (relevant_coords > cut_ahead).astype(int).sum(axis=1)
-    combined_filt = (num_in_ahead + num_in_behind) == 1
+    combined_filt = np.logical_and((num_in_ahead + num_in_behind) > 0,
+                                   (num_in_ahead + num_in_behind) <= ndims)
     return ((loc_and_halo_sites[combined_filt] + corner[None, :])
             % lattice_shape[None, :])
 
