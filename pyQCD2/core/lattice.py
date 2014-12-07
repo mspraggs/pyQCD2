@@ -129,6 +129,23 @@ class Lattice(object):
             pass
         return tuple(slices)
 
+    def make_halo_buffers(self, data):
+        """Make buffers for the halo swap function"""
+        send_buffers = [[]] * self.lattice.ndims
+        recv_buffers = [[]] * self.lattice.ndims
+        for i in range(self.lattice.ndims):
+            if self.halos[i] == 0:
+                # Don't need a buffer as there's no halo
+                continue
+            shape = self.locshape.copy()
+            shape[i] = self.halos[i]
+            for d in [-1, 1]:
+                slicer = self.halo_slice(i, d, 'send')
+                send_buffers[i].append(data[slicer].copy())
+                recv_buffers[i].append(np.empty(shape, dtype=data.dtype))
+
+        return send_buffers, recv_buffers
+
     def get_site_rank(self, site):
         """Gets the rank of the node in which the specified site lies"""
         mpicoords = site // self.locshape
