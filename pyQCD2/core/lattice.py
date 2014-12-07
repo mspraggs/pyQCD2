@@ -125,6 +125,11 @@ class Lattice(object):
             pass
         return tuple(slices)
 
+    def get_site_rank(self, site):
+        """Gets the rank of the node in which the specified site lies"""
+        mpicoords = site // self.locshape
+        return self.comm.Get_cart_rank(mpicoords)
+
     def get_local_coords(self, site):
         """Get the local coordinates of the specified site"""
         if (self.local_sites == site[None, :]).all(axis=1).any():

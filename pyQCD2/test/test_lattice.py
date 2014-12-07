@@ -140,6 +140,13 @@ class TestLattice(object):
         expected_slicer[1] = slice(-lattice.halos[1], None)
         assert tuple(expected_slicer) == slicer
 
+    def test_get_site_rank(self):
+        """Test the get_site_rank function"""
+        lattice = Lattice((8, 4, 4, 4), 1)
+        assert lattice.get_site_rank((0, 0, 0, 0)) == 0
+        assert (lattice.get_site_rank((7, 3, 3, 3))
+                == lattice.comm.Get_size() - 1)
+
     def test_get_local_coords(self):
         """Test Lattice.get_local_coords"""
         lattice = Lattice((8, 4, 4, 4), 1)
