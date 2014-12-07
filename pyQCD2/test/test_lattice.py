@@ -82,6 +82,10 @@ def test_compute_halo_coords():
                                       np.array([0, 1, 0, 0]),
                                       mpishape, locshape, haloshape, halos)
     assert (halo_coords == np.array([6, 0, 2, 2])).all()
+    halo_coords = compute_halo_coords(np.array([0, 0, 0, 0]),
+                                      np.array([3, 3, 3, 3]),
+                                      mpishape, locshape, haloshape, halos)
+    assert (halo_coords == np.array([8, 4, 4, 4])).all()
 
 
 class TestLattice(object):
