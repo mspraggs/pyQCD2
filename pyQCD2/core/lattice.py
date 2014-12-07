@@ -25,7 +25,7 @@ def generate_halo_sites(mpi_coord, local_shape, lattice_shape, halos):
     loc_and_halo_sites = np.array(list(np.ndindex(tuple(halo_shape))))
     # First discard any axes that don't have halos
     relevant_coords = loc_and_halo_sites[:, halos > 0]
-    # Now we want to filter out all sites where there isn't one and only
+    # Now we want to filter out all sites where there is one and only
     # one axis coordinate in the halo.
     nonzero_halos = halos[halos > 0]
     nonzero_shape = halo_shape[halos > 0]
