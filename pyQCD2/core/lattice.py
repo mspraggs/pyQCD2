@@ -131,19 +131,24 @@ class Lattice(object):
 
     def make_halo_buffers(self, data):
         """Make buffers for the halo swap function"""
-        send_buffers = [[]] * self.lattice.ndims
-        recv_buffers = [[]] * self.lattice.ndims
-        for i in range(self.lattice.ndims):
+        send_buffers = []
+        recv_buffers = []
+        for i in range(self.ndims):
             if self.halos[i] == 0:
                 # Don't need a buffer as there's no halo
+                send_buffers.append([])
+                recv_buffers.append([])
                 continue
             shape = self.locshape.copy()
             shape[i] = self.halos[i]
-            for d in [-1, 1]:
+            snd_bufs_i = []
+            rcv_bufs_i = []
+            for d in [1, -1]:
                 slicer = self.halo_slice(i, d, 'send')
-                send_buffers[i].append(data[slicer].copy())
-                recv_buffers[i].append(np.empty(shape, dtype=data.dtype))
-
+                snd_bufs_i.append(data[slicer].copy())
+                rcv_bufs_i.append(np.empty(tuple(shape), dtype=data.dtype))
+            send_buffers.append(snd_bufs_i)
+            recv_buffers.append(rcv_bufs_i)
         return send_buffers, recv_buffers
 
     def get_site_rank(self, site):
