@@ -151,6 +151,13 @@ class Lattice(object):
             recv_buffers.append(rcv_bufs_i)
         return send_buffers, recv_buffers
 
+    def buffers_to_data(self, data, recv_buffers):
+        """Puts the received buffer data in the data array"""
+        for i in range(self.ndims):
+            for d, buf in zip([1, -1], recv_buffers[i]):
+                slicer = self.halo_slice(i, d, 'recv')
+                data[slicer] = buf
+
     def get_site_rank(self, site):
         """Gets the rank of the node in which the specified site lies"""
         mpicoords = site // self.locshape
