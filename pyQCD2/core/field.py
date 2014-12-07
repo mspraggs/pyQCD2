@@ -27,9 +27,14 @@ class Field(object):
     def fill(self, value):
         """Fill all site values with the specified value"""
 
-    def halo_swap(self, axis=None):
+    def halo_swap(self, axis=None, buffers=None, block=True):
         """Swap the values in the field values in the halos between adjacent
         nodes using MPI"""
+
+        if buffers:
+            send_buffers, recv_buffers = buffers
+        else:
+            send_buffers, recv_buffers = self.lattice.make_halo_buffers(self.data)
 
         comm = self.lattice.comm
         # If there's only one node, don't bother swapping
@@ -38,16 +43,20 @@ class Field(object):
         for i, neighbours in enumerate(self.lattice.mpi_neighbours):
             if not neighbours:
                 continue
-            for direc in [1, -1]:
+            for j, direc in enumerate([1, -1]):
                 # direc = 1 -> pass forward; direc = -1 -> pass backward
                 # neighbours = [node_behind, node_ahead]
                 node_from, node_to = neighbours[::direc]
-                send_slicer = self.lattice.halo_slice(i, direc, 'send')
-                recv_slicer = self.lattice.halo_slice(i, -direc, 'recv')
-                buffer = self.data[send_slicer].copy()
-                comm.Send([buffer, self.mpi_dtype], dest=node_to)
-                comm.Recv([buffer, self.mpi_dtype], source=node_from)
-                self.data[recv_slicer] = buffer
+                comm.Isend([send_buffers[i][j], self.mpi_dtype],
+                           dest=node_to)
+                comm.Irecv([recv_buffers[i][j], self.mpi_dtype],
+                           source=node_from)
+        # If blocking, wait for processes to finish and fill the data variable
+        if block:
+            comm.Barrier()
+            self.lattice.buffers_to_data(self.data, recv_buffers)
+        else:
+            return recv_buffers
 
     def fill(self, value):
         """Fill the field with the specified value"""
