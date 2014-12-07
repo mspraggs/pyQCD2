@@ -97,6 +97,10 @@ class Lattice(object):
                 axis_neighbours.append(neighbour_rank)
             self.mpi_neighbours.append(axis_neighbours)
 
+    def message(self, msg):
+        if self.comm.Get_rank() == 0:
+            print(msg)
+
     def ishere(self, site):
         """Determine whether the current coordinate is here"""
         site = np.array(site)[None, :]
