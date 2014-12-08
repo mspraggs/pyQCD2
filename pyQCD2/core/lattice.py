@@ -115,8 +115,8 @@ class Lattice(object):
         # send_recv - whether the slice is the halo itself ('recv') or the
         # selection of local sites corresponding to a halo on another node
         # ('send')
-        slices = [slice(h, -h) if h > 0 else slice(None)
-                  for h in self.halos]
+        slices = [slice(h, -h) if (h > 0 and i > dim) else slice(None)
+                  for i, h in enumerate(self.halos)]
         if position < 0 and send_recv == 'send':
             slices[dim] = slice(self.halos[dim], 2 * self.halos[dim])
         elif position < 0 and send_recv == 'recv':
@@ -139,7 +139,9 @@ class Lattice(object):
                 send_buffers.append([])
                 recv_buffers.append([])
                 continue
-            shape = self.locshape.copy()
+            shape = np.zeros(self.ndims, int)
+            shape[:i] = self.haloshape[:i]
+            shape[i:] = self.locshape[i:]
             shape[i] = self.halos[i]
             snd_bufs_i = []
             rcv_bufs_i = []

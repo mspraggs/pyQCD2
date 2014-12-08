@@ -139,11 +139,13 @@ class TestLattice(object):
         slicer = lattice.halo_slice(2, -1, 'send')
         expected_slicer = [slice(h, -h) if h > 0 else slice(None)
                            for h in lattice.halos]
+        expected_slicer[:2] = [slice(None)] * 2
         expected_slicer[2] = slice(lattice.halos[2], 2 * lattice.halos[2])
         assert tuple(expected_slicer) == slicer
         slicer = lattice.halo_slice(1, 1, 'recv')
         expected_slicer = [slice(h, -h) if h > 0 else slice(None)
                            for h in lattice.halos]
+        expected_slicer[0] = slice(None)
         expected_slicer[1] = slice(-lattice.halos[1], None)
         assert tuple(expected_slicer) == slicer
 
