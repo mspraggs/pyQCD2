@@ -175,26 +175,27 @@ class Lattice(object):
             or coord_to_index(site, self.latshape) in self.halo_site_indices
         )
 
-    def halo_slice(self, dim, position, send_recv):
+    def halo_slice(self, halo_norm, send_recv):
         """Generate the slice specifiying the halo region of Field.data"""
-        # dim - dimension/axis of the slice
+        # TODO: Add multi-dimension slices for corner cases
+        # dim - dimensions of the slice
         # location - whether front (+ve direction, +1) or rear (-ve direction,
         # -1) halo is being used.
         # send_recv - whether the slice is the halo itself ('recv') or the
         # selection of local sites corresponding to a halo on another node
         # ('send')
-        slices = [slice(h, -h) if (h > 0 and i > dim) else slice(None)
-                  for i, h in enumerate(self.halos)]
-        if position < 0 and send_recv == 'send':
-            slices[dim] = slice(self.halos[dim], 2 * self.halos[dim])
-        elif position < 0 and send_recv == 'recv':
-            slices[dim] = slice(None, self.halos[dim])
-        elif position > 0 and send_recv == 'send':
-            slices[dim] = slice(-2 * self.halos[dim], -self.halos[dim])
-        elif position > 0 and send_recv == 'recv':
-            slices[dim] = slice(-self.halos[dim], None)
-        else:
-            pass
+        slices = np.array([slice(h, -h) if h > 0 else slice(None)
+                           for h in self.halos])
+        if send_recv == 'send':
+            halo_slicer = np.array([slice(h, 2 * h) for h in self.halos])
+            slices[halo_norm < 0] = halo_slicer[halo_norm < 0]
+            halo_slicer = np.array([slice(-2 * h, -h) for h in self.halos])
+            slices[halo_norm > 0] = halo_slicer[halo_norm > 0]
+        elif send_recv == 'recv':
+            halo_slicer = np.array([slice(None, h) for h in self.halos])
+            slices[halo_norm < 0] = halo_slicer[halo_norm < 0]
+            halo_slicer = np.array([slice(-h, None) for h in self.halos])
+            slices[halo_norm > 0] = halo_slicer[halo_norm > 0]
         return tuple(slices)
 
     def make_halo_buffers(self, data):
