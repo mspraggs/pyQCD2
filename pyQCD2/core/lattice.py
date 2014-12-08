@@ -170,9 +170,10 @@ class Lattice(object):
 
     def ishere(self, site):
         """Determine whether the current coordinate is here"""
-        site = np.array(site)[None, :]
-        return ((self.local_sites == site).all(axis=1).any()
-                or (self.halo_sites == site).all(axis=1).any())
+        return (
+            coord_to_index(site, self.latshape) in self.local_site_indices
+            or coord_to_index(site, self.latshape) in self.halo_site_indices
+        )
 
     def halo_slice(self, dim, position, send_recv):
         """Generate the slice specifiying the halo region of Field.data"""
@@ -234,11 +235,11 @@ class Lattice(object):
 
     def get_local_coords(self, site):
         """Get the local coordinates of the specified site"""
-        if (self.local_sites == site[None, :]).all(axis=1).any():
+        if coord_to_index(site, self.latshape) in self.local_site_indices:
             # Account for the halo around the local data
             local_coords = site % self.locshape
             return tuple(local_coords + self.halos)
-        elif (self.halo_sites == site[None, :]).all(axis=1).any():
+        elif coord_to_index(site, self.latshape) in self.halo_site_indices:
             return compute_halo_coords(site, self.mpicoord, self.mpishape,
                                        self.locshape, self.haloshape,
                                        self.halos)
