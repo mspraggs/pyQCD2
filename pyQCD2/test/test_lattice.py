@@ -198,7 +198,7 @@ class TestLattice(object):
         slicer = lattice.halo_slice(np.array([-1, 1, 0, 0]), 'recv')
         expected_slicer = [slice(h, -h) if h > 0 else slice(None)
                            for h in lattice.halos]
-        expected_slicer[0] = slice(None, lattice.halos[1])
+        expected_slicer[0] = slice(None, lattice.halos[0])
         expected_slicer[1] = slice(-lattice.halos[1], None)
         assert tuple(expected_slicer) == slicer
 
