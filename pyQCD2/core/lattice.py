@@ -206,7 +206,7 @@ class Lattice(object):
                                                       self.bck_halo_norms)]
         recv_buffers = [(np.empty(tuple(shape), dtype=data.dtype),
                          np.empty(tuple(shape), dtype=data.dtype))
-                        for shape in roundrobin(self.halo_buffer_shapes)]
+                        for shape in self.halo_buffer_shapes]
         return send_buffers, recv_buffers
 
     def buffers_to_data(self, data, recv_buffers):
