@@ -6,8 +6,9 @@ from mpi4py import MPI
 import numpy as np
 import pytest
 
-from pyQCD2.core.lattice import (compute_halo_coords, generate_halo_sites,
-                                 generate_local_sites, Lattice)
+from pyQCD2.core.lattice import (compute_halo_coords, compute_neighbours,
+                                 generate_halo_sites, generate_local_sites,
+                                 Lattice)
 
 
 @pytest.fixture
@@ -89,6 +90,40 @@ def test_compute_halo_coords():
                                       np.array([3, 3, 3, 3]),
                                       mpishape, locshape, haloshape, halos)
     assert (halo_coords == np.array([8, 4, 4, 4])).all()
+
+
+def test_compute_neighbours():
+    """Test the comptue_neighbours function in lattice.py"""
+    mpishape = np.array([2, 1, 1, 1])
+    mpicoord = np.array([0, 0, 0, 0])
+    locshape = np.array([8, 4, 8, 6])
+    halos = np.array([2, 0, 0, 0])
+    neighbours_data = compute_neighbours(mpicoord, mpishape, locshape,
+                                         halos, -1)
+    assert (neighbours_data[0] == np.array([[1, 0, 0, 0]])).all()
+    assert (neighbours_data[0] == neighbours_data[1]).all()
+    assert (neighbours_data[2] == -neighbours_data[3]).all()
+    assert (neighbours_data[4] == np.array([[2, 4, 8, 6]])).all()
+
+    mpishape = np.array([2, 1, 2, 1])
+    mpicoord = np.array([0, 0, 1, 0])
+    locshape = np.array([8, 4, 4, 6])
+    halos = np.array([2, 0, 2, 0])
+    neighbours_data = compute_neighbours(mpicoord, mpishape, locshape,
+                                         halos, -1)
+    print(neighbours_data)
+    assert (neighbours_data[0] == np.array([[0, 0, 0, 0],
+                                            [1, 0, 0, 0],
+                                            [1, 0, 1, 0],
+                                            [1, 0, 0, 0]])).all()
+    assert (neighbours_data[0] == neighbours_data[1]).all()
+    assert (np.abs(neighbours_data[2]).sum(axis=1) <= 3).all()
+    assert (np.abs(neighbours_data[2]) <= 1).all()
+    assert (neighbours_data[2] == -neighbours_data[3]).all()
+    assert (neighbours_data[4] == np.array([[8, 4, 2, 6],
+                                            [2, 4, 2, 6],
+                                            [2, 4, 4, 6],
+                                            [2, 4, 2, 6]])).all()
 
 
 class TestLattice(object):
