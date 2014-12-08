@@ -71,6 +71,7 @@ def compute_neighbours(mpicoord, mpishape, locshape, halos, max_mpi_hop):
     # diagonal that passes through this node.
     ndims = halos.size
     max_mpi_hop = (ndims + max_mpi_hop) % ndims
+    max_mpi_hop = ndims if max_mpi_hop == 0 else max_mpi_hop
     cart_offsets = (np.array(list(np.ndindex(tuple([3] * ndims))))
                     - np.ones(ndims, dtype=int)[None, :])
     offset_hops = np.abs(cart_offsets).sum(axis=1)
