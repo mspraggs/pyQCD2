@@ -40,13 +40,11 @@ class Field(object):
         # If there's only one node, don't bother swapping
         if comm.Get_size() == 1:
             return
-        for i, neighbours in enumerate(self.lattice.mpi_neighbours):
-            if not neighbours:
-                continue
+
+        for i, ranks in enumerate(zip(self.lattice.fnt_neighb_ranks,
+                                      self.lattice.bck_neighb_ranks)):
             for j, direc in enumerate([1, -1]):
-                # direc = 1 -> pass forward; direc = -1 -> pass backward
-                # neighbours = [node_behind, node_ahead]
-                node_from, node_to = neighbours[::direc]
+                node_to, node_from = ranks[::direc]
                 comm.Isend([send_buffers[i][j], self.mpi_dtype],
                            dest=node_to)
                 comm.Irecv([recv_buffers[i][j], self.mpi_dtype],
