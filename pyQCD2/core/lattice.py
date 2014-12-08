@@ -96,6 +96,11 @@ def compute_neighbours(mpicoord, mpishape, locshape, halos, max_mpi_hop):
             fnt_cart_offsets, bck_cart_offsets, halo_buffer_shapes)
 
 
+def coord_to_index(coord, shape):
+    """Converts the supplied site coordinate to a lexicographic index"""
+    return reduce(lambda x, y: x * y[0] + y[1], zip(shape, coord), 0)
+
+
 class Lattice(object):
     """Handles MPI allocation of lattice sites"""
 
@@ -118,9 +123,15 @@ class Lattice(object):
 
         # Determine the coordinates of the sites on the current node
         self.mpicoord = np.array(self.comm.Get_coords(self.comm.Get_rank()))
-        self.local_sites = generate_local_sites(self.mpicoord, self.locshape)
-        self.halo_sites = generate_halo_sites(self.mpicoord, self.locshape,
-                                              self.latshape, self.halos)
+        self.local_site_coords = generate_local_sites(self.mpicoord,
+                                                      self.locshape)
+        self.local_site_indices = np.array([coord_to_index(x, self.latshape)
+                                            for x in self.local_site_coords])
+        self.halo_site_corods = generate_halo_sites(self.mpicoord,
+                                                    self.locshape,
+                                                    self.latshape, self.halos)
+        self.local_site_indices = np.array([coord_to_index(x, self.latshape)
+                                            for x in self.halo_site_coords])
         # Compute neighbour coordinates
         neighbour_info = compute_neighbours(self.mpicoord, self.mpishape,
                                             self.locshape, self.halos,

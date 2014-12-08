@@ -6,9 +6,9 @@ from mpi4py import MPI
 import numpy as np
 import pytest
 
-from pyQCD2.core.lattice import (compute_halo_coords, compute_neighbours,
-                                 generate_halo_sites, generate_local_sites,
-                                 Lattice)
+from pyQCD2.core.lattice import (coord_to_index, compute_halo_coords,
+                                 compute_neighbours, generate_halo_sites,
+                                 generate_local_sites, Lattice)
 
 
 @pytest.fixture
@@ -125,6 +125,12 @@ def test_compute_neighbours():
                                             [2, 4, 4, 6],
                                             [2, 4, 2, 6]])).all()
 
+
+def test_coord_to_index():
+    """Test coord_to_index in lattice.py"""
+    assert coord_to_index((1, 3, 2, 1), (8, 4, 5, 6)) == 223
+    assert coord_to_index((0, 0, 0, 0), (8, 4, 5, 6)) == 0
+    assert coord_to_index((7, 3, 4, 5), (8, 4, 5, 6)) == 959
 
 class TestLattice(object):
 
