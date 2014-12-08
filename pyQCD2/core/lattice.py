@@ -37,7 +37,8 @@ def generate_halo_sites(mpi_coord, local_shape, lattice_shape, halos):
     cut_ahead = nonzero_shape[None, :] - cut_behind - 1
     num_in_ahead = (relevant_coords > cut_ahead).astype(int).sum(axis=1)
     combined_filt = np.logical_and((num_in_ahead + num_in_behind) > 0,
-                                   (num_in_ahead + num_in_behind) <= ndims)
+                                   (num_in_ahead + num_in_behind)
+                                   <= max_mpi_hop)
     return ((loc_and_halo_sites[combined_filt] + corner[None, :])
             % lattice_shape[None, :])
 

@@ -51,20 +51,27 @@ def test_generate_halo_sites():
     local_shape = (8, 4, 4)
     lattice_shape = (16, 8, 4)
     halos = (1, 1, 0)
+
+    def not_in_corner(w, z):
+        return (w, z) not in [(-1, -1), (-1, 4), (8, -1), (8, 4)]
+
     loc_sites = set([tuple(map(lambda x: sum(x),
                                zip(n, (8, 0, 0))))
                      for n in np.ndindex(local_shape)])
-    all_sites = set([((t + 8) % 16, x % 8, y % 4)
-                     for t in range(-1, 9) for x in range(-1, 5)
-                     for y in range(4)])
-    expected_sites = all_sites.difference(loc_sites)
-    halo_sites = generate_halo_sites(np.array(mpi_coord),
-                                     np.array(local_shape),
-                                     np.array(lattice_shape),
-                                     np.array(halos))
-    halo_sites_set = set([tuple(s) for s in halo_sites])
-    assert len(halo_sites) == len(expected_sites)
-    assert halo_sites_set == expected_sites
+    for max_hops, condition in zip([3, 1], [lambda t, x: True,
+                                            not_in_corner]):
+        all_sites = set([((t + 8) % 16, x % 8, y % 4)
+                         for t in range(-1, 9)
+                         for x in range(-1, 5)
+                         for y in range(4) if condition(t, x)])
+        expected_sites = all_sites.difference(loc_sites)
+        halo_sites = generate_halo_sites(np.array(mpi_coord),
+                                         np.array(local_shape),
+                                         np.array(lattice_shape),
+                                         np.array(halos), max_hops)
+        halo_sites_set = set([tuple(s) for s in halo_sites])
+        assert len(halo_sites) == len(expected_sites)
+        assert halo_sites_set == expected_sites
 
 
 def test_compute_halo_coords():
