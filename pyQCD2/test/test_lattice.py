@@ -138,6 +138,7 @@ def test_coord_to_index():
     assert coord_to_index((0, 0, 0, 0), (8, 4, 5, 6)) == 0
     assert coord_to_index((7, 3, 4, 5), (8, 4, 5, 6)) == 959
 
+
 class TestLattice(object):
 
     def test_init(self, lattice_params):
