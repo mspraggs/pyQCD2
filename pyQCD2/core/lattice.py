@@ -58,10 +58,48 @@ def compute_halo_coords(site, mpicoord, mpishape, locshape, haloshape, halos):
     return local_coords % haloshape
 
 
+def compute_neighbours(mpicoord, mpishape, locshape, halos, max_mpi_hop):
+    """Compute the mpi coordinates of the nodes we have a halo for, then
+    compute the shape of the halo for that node"""
+    # N.B. Variable name prefix fnt implies that first non-zero axis offset
+    # for current node is positive, whilst bck implies first non-zero axis
+    # offset is negative. Each pair of variables with these prefixes should
+    # be ordered so each index corresponds to nodes that are on the same
+    # diagonal that passes through this node.
+    ndims = halos.size
+    max_mpi_hop = (ndims + max_mpi_hop) % ndims
+    cart_offsets = (np.array(list(np.ndindex(tuple([3] * ndims))))
+                    - np.ones(ndims, dtype=int)[None, :])
+    offset_hops = np.abs(cart_offsets).sum(axis=1)
+    hop_filt = np.logical_and(offset_hops <= max_mpi_hop, offset_hops > 0)
+    # Filter out offsets where the mpi dimension in which the hop takes
+    # place is 1, because no comm is needed in this case.
+    dimension_filt = ((halos[None, :] > 0).astype(int)
+                      >= np.abs(cart_offsets)).all(axis=1)
+    combined_filt = np.logical_and(dimension_filt, hop_filt)
+    cart_offsets = cart_offsets[combined_filt]
+    fnt_cart_offsets = cart_offsets[cart_offsets.shape[0]/2:]
+    # Flip the back coordinates so we align diagonals with fnt_cart_offsets
+    bck_cart_offsets = cart_offsets[:cart_offsets.shape[0]/2][::-1]
+    fnt_neighb_coords = ((fnt_cart_offsets + mpicoord[None, :])
+                         % mpishape[None, :])
+    bck_neighb_coords = ((bck_cart_offsets + mpicoord[None, :])
+                         % mpishape[None, :])
+    halo_buffer_shapes = np.empty(fnt_cart_offsets.shape, dtype=int)
+    halo_buffer_shapes[...] = locshape
+    # Filter out references to this node
+    halos_broadcast = np.empty(halo_buffer_shapes.shape, dtype=int)
+    halos_broadcast[...] = halos
+    halo_filt = np.abs(fnt_cart_offsets) > 0
+    halo_buffer_shapes[halo_filt] = halos_broadcast[halo_filt]
+    return (fnt_neighb_coords, bck_neighb_coords,
+            fnt_cart_offsets, bck_cart_offsets, halo_buffer_shapes)
+
+
 class Lattice(object):
     """Handles MPI allocation of lattice sites"""
 
-    def __init__(self, shape, halo=1):
+    def __init__(self, shape, halo=1, max_mpi_hop=-1):
         """Construct Lattice object for lattice with supplied shape"""
         nprocs = MPI.COMM_WORLD.Get_size()
         self.latshape = np.array(shape)
@@ -83,6 +121,19 @@ class Lattice(object):
         self.local_sites = generate_local_sites(self.mpicoord, self.locshape)
         self.halo_sites = generate_halo_sites(self.mpicoord, self.locshape,
                                               self.latshape, self.halos)
+        # Compute neighbour coordinates
+        neighbour_info = compute_neighbours(self.mpicoord, self.mpishape,
+                                            self.locshape, self.halos,
+                                            max_mpi_hop)
+        self.fnt_neighb_coords = neighbour_info[0]
+        self.bck_neighb_coords = neighbour_info[1]
+        self.fnt_halo_norms = neighbour_info[2]
+        self.bck_halo_norms = neighbour_info[3]
+        self.halo_buffer_shapes = neighbour_info[4]
+        self.fnt_neighb_ranks = np.array(map(self.comm.Get_cart_rank,
+                                             self.fnt_neighb_coords))
+        self.bck_neighb_ranks = np.array(map(self.comm.Get_cart_rank,
+                                             self.bck_neighb_coords))
 
         self.mpi_neighbours = []
         for dim in range(self.ndims):
