@@ -177,7 +177,6 @@ class Lattice(object):
 
     def halo_slice(self, halo_norm, send_recv):
         """Generate the slice specifiying the halo region of Field.data"""
-        # TODO: Add multi-dimension slices for corner cases
         # dim - dimensions of the slice
         # location - whether front (+ve direction, +1) or rear (-ve direction,
         # -1) halo is being used.
