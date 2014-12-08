@@ -143,7 +143,8 @@ class TestLattice(object):
             else:
                 assert getattr(lattice, key) == value
         assert isinstance(lattice.comm, MPI.Cartcomm)
-        assert len(lattice.local_sites) == lattice_params['locvol']
+        assert lattice.local_site_coords.shape[0] == lattice_params['locvol']
+        assert lattice.local_site_indices.size == lattice_params['locvol']
         my_coord = lattice.comm.Get_coords(lattice.comm.Get_rank())
         # MPI neighbours shouldn't be more than 1 hop away
         for axis_neighbours in lattice.mpi_neighbours:
