@@ -18,9 +18,11 @@ def generate_local_sites(mpi_coord, local_shape):
     return [tuple(site) for site in (local_sites + corner[None, :])]
 
 
-def generate_halo_sites(mpi_coord, local_shape, lattice_shape, halos):
+def generate_halo_sites(mpi_coord, local_shape, lattice_shape, halos,
+                        max_mpi_hop):
     """Generate a list of sites in the halo of the specified MPI node"""
-    ndims = len(lattice_shape)
+    max_mpi_hop = (max_mpi_hop + lattice_shape.size) % lattice_shape.size
+    max_mpi_hop = lattice_shape.size if max_mpi_hop == 0 else max_mpi_hop
     corner = (mpi_coord * local_shape - halos)
     halo_shape = local_shape + 2 * halos
     loc_and_halo_sites = np.array(list(np.ndindex(tuple(halo_shape))))
