@@ -118,7 +118,6 @@ def test_compute_neighbours():
     halos = np.array([2, 0, 2, 0])
     neighbours_data = compute_neighbours(mpicoord, mpishape, locshape,
                                          halos, -1)
-    print(neighbours_data)
     assert (neighbours_data[0] == np.array([[0, 0, 0, 0],
                                             [1, 0, 0, 0],
                                             [1, 0, 1, 0],
