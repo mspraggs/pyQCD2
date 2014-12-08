@@ -132,7 +132,8 @@ class Lattice(object):
                                             for x in self.local_site_coords])
         self.halo_site_coords = generate_halo_sites(self.mpicoord,
                                                     self.locshape,
-                                                    self.latshape, self.halos)
+                                                    self.latshape, self.halos,
+                                                    max_mpi_hop)
         self.halo_site_indices = np.array([coord_to_index(x, self.latshape)
                                            for x in self.halo_site_coords])
         # Compute neighbour coordinates
