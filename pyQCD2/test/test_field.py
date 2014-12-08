@@ -27,6 +27,18 @@ def test_field():
                              lattice=lattice))
 
 
+@pytest.fixture
+def full_halo_field():
+    """Fixture to set up a lattice and field with a full halo"""
+    FieldFixture = collections.namedtuple("FieldFixture",
+                                          ["field", "lattice"])
+    lattice = Lattice((8, 4, 4, 4), max_mpi_hop=4)
+    field = Field(lattice, (), float)
+    s = tuple([slice(h, -h) if h > 0 else slice(None) for h in lattice.halos])
+    field.data[s] = 1.0
+    return FieldFixture(field, lattice)
+
+
 class TestField(object):
 
     def test_init(self, test_field):
@@ -41,67 +53,52 @@ class TestField(object):
         expected_shape = (haloshape + test_field.params['field_shape'])
         assert field.data.shape == expected_shape
 
-    def test_halo_swap(self, test_field):
+    def test_halo_swap(self, full_halo_field):
         """Test for halo swapping"""
 
         # Exit if there's no MPI involved
-        if test_field.params['lattice'].comm.Get_size() == 1:
+        if full_halo_field.lattice.comm.Get_size() == 1:
             return
 
         # First check that all data is zero
-        ndims = test_field.params['lattice'].ndims
-        halos = test_field.params['lattice'].halos
+        ndims = full_halo_field.lattice.ndims
+        halos = full_halo_field.lattice.halos
         for dim in range(ndims):
             if halos[dim] == 0:
                 continue
             selector = [slice(halo, -halo) if halo > 0 else slice(None)
                         for halo in halos]
             selector[dim] = slice(None, halos[dim])
-            assert np.allclose(test_field.field.data[tuple(selector)], 0)
+            assert np.allclose(full_halo_field.field.data[tuple(selector)], 0)
             selector[dim] = slice(-halos[dim], None)
-            assert np.allclose(test_field.field.data[tuple(selector)], 0)
-        test_field.field.halo_swap()
-        for dim in range(ndims):
-            if halos[dim] == 0:
-                continue
-            selector = [slice(halo, -halo) if halo > 0 else slice(None)
-                        for halo in halos]
-            selector[dim] = slice(None, halos[dim])
-            assert np.allclose(test_field.field.data[tuple(selector)], 1)
-            selector[dim] = slice(-halos[dim], None)
-            assert np.allclose(test_field.field.data[tuple(selector)], 1)
+            assert np.allclose(full_halo_field.field.data[tuple(selector)], 0)
+        full_halo_field.field.halo_swap()
+        
+        assert np.allclose(full_halo_field.field.data, 1)
 
-    def test_halo_swap_nonblock(self, test_field):
+    def test_halo_swap_nonblock(self, full_halo_field):
 
         # Exit if there's no MPI involved
-        if test_field.params['lattice'].comm.Get_size() == 1:
+        if full_halo_field.lattice.comm.Get_size() == 1:
             return
 
         # First check that all data is zero
-        ndims = test_field.params['lattice'].ndims
-        halos = test_field.params['lattice'].halos
+        ndims = full_halo_field.lattice.ndims
+        halos = full_halo_field.lattice.halos
         for dim in range(ndims):
             if halos[dim] == 0:
                 continue
             selector = [slice(halo, -halo) if halo > 0 else slice(None)
                         for halo in halos]
             selector[dim] = slice(None, halos[dim])
-            assert np.allclose(test_field.field.data[tuple(selector)], 0)
+            assert np.allclose(full_halo_field.field.data[tuple(selector)], 0)
             selector[dim] = slice(-halos[dim], None)
-            assert np.allclose(test_field.field.data[tuple(selector)], 0)
-        recv_buffers = test_field.field.halo_swap(block=False)
-        test_field.params['lattice'].comm.Barrier()
-        test_field.params['lattice'].buffers_to_data(test_field.field.data,
-                                                     recv_buffers)
-        for dim in range(ndims):
-            if halos[dim] == 0:
-                continue
-            selector = [slice(halo, -halo) if halo > 0 else slice(None)
-                        for halo in halos]
-            selector[dim] = slice(None, halos[dim])
-            assert np.allclose(test_field.field.data[tuple(selector)], 1)
-            selector[dim] = slice(-halos[dim], None)
-            assert np.allclose(test_field.field.data[tuple(selector)], 1)
+            assert np.allclose(full_halo_field.field.data[tuple(selector)], 0)
+        recv_buffers = full_halo_field.field.halo_swap(block=False)
+        full_halo_field.lattice.comm.Barrier()
+        full_halo_field.lattice.buffers_to_data(full_halo_field.field.data,
+                                                recv_buffers)
+        assert np.allclose(full_halo_field.field.data, 1)
 
     def test_fill(self, test_field):
         """Test Field.fill"""
