@@ -185,16 +185,20 @@ class TestLattice(object):
     def test_halo_slice(self):
         """Test the halo slice specification function"""
         lattice = Lattice((8, 4, 4, 4), 1)
-        slicer = lattice.halo_slice(2, -1, 'send')
+        slicer = lattice.halo_slice(np.array([0, 0, -1, 0]), 'send')
         expected_slicer = [slice(h, -h) if h > 0 else slice(None)
                            for h in lattice.halos]
-        expected_slicer[:2] = [slice(None)] * 2
         expected_slicer[2] = slice(lattice.halos[2], 2 * lattice.halos[2])
         assert tuple(expected_slicer) == slicer
-        slicer = lattice.halo_slice(1, 1, 'recv')
+        slicer = lattice.halo_slice(np.array([0, 1, 0, 0]), 'recv')
         expected_slicer = [slice(h, -h) if h > 0 else slice(None)
                            for h in lattice.halos]
-        expected_slicer[0] = slice(None)
+        expected_slicer[1] = slice(-lattice.halos[1], None)
+        assert tuple(expected_slicer) == slicer
+        slicer = lattice.halo_slice(np.array([-1, 1, 0, 0]), 'recv')
+        expected_slicer = [slice(h, -h) if h > 0 else slice(None)
+                           for h in lattice.halos]
+        expected_slicer[0] = slice(None, lattice.halos[1])
         expected_slicer[1] = slice(-lattice.halos[1], None)
         assert tuple(expected_slicer) == slicer
 
