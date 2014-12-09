@@ -94,10 +94,13 @@ class TestField(object):
             assert np.allclose(full_halo_field.field.data[tuple(selector)], 0)
             selector[dim] = slice(-halos[dim], None)
             assert np.allclose(full_halo_field.field.data[tuple(selector)], 0)
-        recv_buffers = full_halo_field.field.halo_swap(block=False)
-        full_halo_field.lattice.comm.Barrier()
+        buffers = (full_halo_field.lattice
+                   .make_halo_buffers(full_halo_field.field.data))
+        requests = full_halo_field.field.halo_swap(block=False,
+                                                   buffers=buffers)
+        MPI.Request.Waitall(requests)
         full_halo_field.lattice.buffers_to_data(full_halo_field.field.data,
-                                                recv_buffers)
+                                                buffers[1])
         assert np.allclose(full_halo_field.field.data, 1)
 
     def test_fill(self, test_field):
