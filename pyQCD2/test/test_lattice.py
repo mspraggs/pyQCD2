@@ -151,18 +151,6 @@ class TestLattice(object):
         assert isinstance(lattice.comm, MPI.Cartcomm)
         assert lattice.local_site_coords.shape[0] == lattice_params['locvol']
         assert lattice.local_site_indices.size == lattice_params['locvol']
-        my_coord = lattice.comm.Get_coords(lattice.comm.Get_rank())
-        # MPI neighbours shouldn't be more than 1 hop away
-        for axis_neighbours in lattice.mpi_neighbours:
-            for neighbour in axis_neighbours:
-                neighbour_coord = lattice.comm.Get_coords(neighbour)
-                diffs = [abs(x - y) for x, y in zip(my_coord, neighbour_coord)]
-                # Account for periodic boundary conditions
-                for i, diff in enumerate(diffs):
-                    if diff > lattice.mpishape[i] / 2:
-                        diffs[i] = lattice.mpishape[i] - diff
-                assert sum(diffs) == 1
-        assert len(lattice.mpi_neighbours) == 4
 
         if lattice_params['nprocs'] > 1:
             with pytest.raises(RuntimeError):
@@ -175,7 +163,7 @@ class TestLattice(object):
         result = lattice.ishere((0, 0, 0, 0))
         if lattice.comm.Get_rank() == 0:
             assert result
-        elif 0 in reduce(lambda x, y: x + y, lattice.mpi_neighbours):
+        elif 0 in lattice.fnt_neighb_ranks or 0 in lattice.bck_neighb_ranks:
             assert result
         else:
             assert not result
@@ -213,16 +201,17 @@ class TestLattice(object):
         local_coords = lattice.get_local_coords(np.array([0, 0, 0, 0]))
         if lattice.comm.Get_rank() == 0:
             assert local_coords == tuple([int(x > 1) for x in lattice.mpishape])
-        elif 0 in reduce(lambda x, y: x + y, lattice.mpi_neighbours):
+        elif 0 in lattice.fnt_neighb_ranks or 0 in lattice.bck_neighb_ranks:
             assert local_coords is not None
         else:
             assert local_coords is None
         local_coords = lattice.get_local_coords(np.array([7, 3, 3, 3]))
         if lattice.comm.Get_rank() == lattice.comm.Get_size() - 1:
-            assert local_coords == tuple([x + y - 1 for x, y in zip(lattice.locshape,
-                                                                    lattice.halos)])
+            assert local_coords == tuple([x + y - 1
+                                          for x, y in zip(lattice.locshape,
+                                                          lattice.halos)])
         elif (lattice.comm.Get_size() - 1
-              in reduce(lambda x, y: x + y, lattice.mpi_neighbours)):
+              in np.append(lattice.fnt_neighb_ranks, lattice.bck_neighb_ranks)):
             assert local_coords is not None
         else:
             assert local_coords is None
@@ -236,7 +225,7 @@ class TestLattice(object):
         local_index = lattice.get_local_index(np.array([0, 0, 0, 0]))
         if lattice.comm.Get_rank() == 0:
             assert local_index == first_index
-        elif 0 in reduce(lambda x, y: x + y, lattice.mpi_neighbours):
+        elif 0 in lattice.bck_neighb_ranks or 0 in lattice.fnt_neighb_ranks:
             assert local_index is not None
         else:
             assert local_index is None
@@ -244,7 +233,7 @@ class TestLattice(object):
         if lattice.comm.Get_rank() == lattice.comm.Get_size() - 1:
             assert local_index == np.prod(lattice.haloshape) - first_index - 1
         elif (lattice.comm.Get_size() - 1
-              in reduce(lambda x, y: x + y, lattice.mpi_neighbours)):
+              in np.append(lattice.bck_neighb_ranks, lattice.fnt_neighb_ranks)):
             assert local_index is not None
         else:
             assert local_index is None
