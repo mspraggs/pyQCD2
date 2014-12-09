@@ -55,8 +55,7 @@ def test_generate_halo_sites():
     def not_in_corner(w, z):
         return (w, z) not in [(-1, -1), (-1, 4), (8, -1), (8, 4)]
 
-    loc_sites = set([tuple(map(lambda x: sum(x),
-                               zip(n, (8, 0, 0))))
+    loc_sites = set([tuple(map(sum, zip(n, (8, 0, 0))))
                      for n in np.ndindex(local_shape)])
     for max_hops, condition in zip([3, 1], [lambda t, x: True,
                                             not_in_corner]):
@@ -157,8 +156,7 @@ class TestLattice(object):
         for axis_neighbours in lattice.mpi_neighbours:
             for neighbour in axis_neighbours:
                 neighbour_coord = lattice.comm.Get_coords(neighbour)
-                diffs = map(lambda x: abs(x[1] - x[0]),
-                            zip(my_coord, neighbour_coord))
+                diffs = [abs(x - y) for x, y in zip(my_coord, neighbour_coord)]
                 # Account for periodic boundary conditions
                 for i, diff in enumerate(diffs):
                     if diff > lattice.mpishape[i] / 2:
@@ -214,17 +212,15 @@ class TestLattice(object):
         lattice = Lattice((8, 4, 4, 4), 1)
         local_coords = lattice.get_local_coords(np.array([0, 0, 0, 0]))
         if lattice.comm.Get_rank() == 0:
-            assert local_coords == tuple(map(lambda x: int(x > 1),
-                                             lattice.mpishape))
+            assert local_coords == tuple([int(x > 1) for x in lattice.mpishape])
         elif 0 in reduce(lambda x, y: x + y, lattice.mpi_neighbours):
             assert local_coords is not None
         else:
             assert local_coords is None
         local_coords = lattice.get_local_coords(np.array([7, 3, 3, 3]))
         if lattice.comm.Get_rank() == lattice.comm.Get_size() - 1:
-            assert local_coords == tuple(map(lambda x: x[0] + x[1] - 1,
-                                             zip(lattice.locshape,
-                                                 lattice.halos)))
+            assert local_coords == tuple([x + y - 1 for x, y in zip(lattice.locshape,
+                                                                    lattice.halos)])
         elif (lattice.comm.Get_size() - 1
               in reduce(lambda x, y: x + y, lattice.mpi_neighbours)):
             assert local_coords is not None
