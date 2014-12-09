@@ -191,9 +191,9 @@ class Lattice(object):
                          data[self.halo_slice(norm_bck, 'send')].copy())
                         for norm_fnt, norm_bck in zip(self.fnt_halo_norms,
                                                       self.bck_halo_norms)]
-        recv_buffers = [(np.empty(tuple(shape), dtype=data.dtype),
-                         np.empty(tuple(shape), dtype=data.dtype))
-                        for shape in self.halo_buffer_shapes]
+        recv_buffers = [(np.empty(buf1.shape, dtype=data.dtype),
+                         np.empty(buf2.shape, dtype=data.dtype))
+                        for buf1, buf2 in send_buffers]
         return send_buffers, recv_buffers
 
     def buffers_to_data(self, data, recv_buffers):
