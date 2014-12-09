@@ -151,19 +151,6 @@ class Lattice(object):
         self.bck_neighb_ranks = np.array(map(self.comm.Get_cart_rank,
                                              self.bck_neighb_coords))
 
-        self.mpi_neighbours = []
-        for dim in range(self.ndims):
-            axis_neighbours = []
-            for offset in [-1, 1]:
-                coord = list(self.mpicoord)
-                coord[dim] = (coord[dim] + offset) % self.mpishape[dim]
-                neighbour_rank = self.comm.Get_cart_rank(coord)
-                if neighbour_rank == self.comm.Get_rank():
-                    axis_neighbours = []
-                    break
-                axis_neighbours.append(neighbour_rank)
-            self.mpi_neighbours.append(axis_neighbours)
-
     def message(self, msg):
         if self.comm.Get_rank() == 0:
             print(msg)
