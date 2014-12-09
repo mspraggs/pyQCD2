@@ -250,4 +250,4 @@ class Lattice(object):
     def sanitize(site, shape):
         """Applies periodic boundary conditions to the given site coordinate
         using the given the lattice shape"""
-        return tuple(map(lambda x: x[0] % x[1], zip(site, shape)))
+        return tuple([xi % Li for xi, Li in zip(site, shape)])
