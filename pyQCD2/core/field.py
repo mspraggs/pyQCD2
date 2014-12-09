@@ -34,7 +34,8 @@ class Field(object):
         if buffers:
             send_buffers, recv_buffers = buffers
         else:
-            send_buffers, recv_buffers = self.lattice.make_halo_buffers(self.data)
+            send_buffers, recv_buffers = (self.lattice
+                                          .make_halo_buffers(self.data))
 
         comm = self.lattice.comm
         # If there's only one node, don't bother swapping
