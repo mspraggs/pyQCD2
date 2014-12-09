@@ -121,7 +121,7 @@ class Lattice(object):
         self.ndims = self.latshape.size
         self.nprocs = nprocs
 
-        self.comm = MPI.COMM_WORLD.Create_cart(self.mpishape)
+        self.comm = MPI.COMM_WORLD.Create_cart(self.mpishape, reorder=True)
         if (self.latshape % self.mpishape).sum() > 0:
             raise RuntimeError("Invalid number of MPI processes")
 
