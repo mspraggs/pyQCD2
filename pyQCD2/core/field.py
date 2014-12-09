@@ -41,22 +41,23 @@ class Field(object):
         if comm.Get_size() == 1:
             return
 
-        send_func = comm.Send if block else comm.Isend
-
+        requests = []
         for i, ranks in enumerate(zip(self.lattice.fnt_neighb_ranks,
                                       self.lattice.bck_neighb_ranks)):
             for j, direc in enumerate([1, -1]):
                 node_to, node_from = ranks[::direc]
-                comm.Irecv([recv_buffers[i][j], self.mpi_dtype],
-                           source=node_from)
-                send_func([send_buffers[i][j], self.mpi_dtype],
-                          dest=node_to)
+                request = comm.Irecv([recv_buffers[i][j], self.mpi_dtype],
+                                     source=node_from)
+                requests.append(request)
+                request = comm.Isend([send_buffers[i][j], self.mpi_dtype],
+                                     dest=node_to)
+                requests.append(request)
         # If blocking, wait for processes to finish and fill the data variable
         if block:
-            comm.Barrier()
+            MPI.Request.Waitall(requests)
             self.lattice.buffers_to_data(self.data, recv_buffers)
         else:
-            return recv_buffers
+            return requests
 
     def fill(self, value):
         """Fill the field with the specified value"""
