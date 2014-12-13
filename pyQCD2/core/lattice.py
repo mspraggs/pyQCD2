@@ -151,6 +151,15 @@ class Lattice(object):
         self.bck_neighb_ranks = np.array(map(self.comm.Get_cart_rank,
                                              self.bck_neighb_coords))
 
+        self.fnt_snd_slicers = [self.halo_slice(norm, 'send')
+                                for norm in self.fnt_halo_norms]
+        self.bck_snd_slicers = [self.halo_slice(norm, 'send')
+                                for norm in self.bck_halo_norms]
+        self.fnt_rcv_slicers = [self.halo_slice(norm, 'recv')
+                                for norm in self.fnt_halo_norms]
+        self.bck_rcv_slicers = [self.halo_slice(norm, 'recv')
+                                for norm in self.bck_halo_norms]
+
     def message(self, msg):
         if self.comm.Get_rank() == 0:
             print(msg)
@@ -187,10 +196,9 @@ class Lattice(object):
     def make_halo_buffers(self, data):
         """Make buffers for the halo swap function"""
         # TODO: Need to extend this for corner cases
-        send_buffers = [(data[self.halo_slice(norm_fnt, 'send')].copy(),
-                         data[self.halo_slice(norm_bck, 'send')].copy())
-                        for norm_fnt, norm_bck in zip(self.fnt_halo_norms,
-                                                      self.bck_halo_norms)]
+        send_buffers = [(data[slice_fnt].copy(), data[slice_bck].copy())
+                        for slice_fnt, slice_bck in zip(self.fnt_snd_slicers,
+                                                        self.bck_snd_slicers)]
         recv_buffers = [(np.empty(buf1.shape, dtype=data.dtype),
                          np.empty(buf2.shape, dtype=data.dtype))
                         for buf1, buf2 in send_buffers]
@@ -199,11 +207,11 @@ class Lattice(object):
     def buffers_to_data(self, data, recv_buffers):
         """Puts the received buffer data in the data array"""
         # TODO: Change this to work with corners as well
-        it = zip(zip(self.bck_halo_norms, self.fnt_halo_norms),
+        it = zip(zip(self.bck_rcv_slicers, self.fnt_rcv_slicers),
                  recv_buffers)
-        for norms, buffers in it:
-            for norm, buffer in zip(norms, buffers):
-                data[self.halo_slice(norm, 'recv')] = buffer
+        for slicers, buffers in it:
+            for slicer, buffer in zip(slicers, buffers):
+                data[slicer] = buffer
 
     def get_site_rank(self, site):
         """Gets the rank of the node in which the specified site lies"""
